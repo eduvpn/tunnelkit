@@ -128,6 +128,8 @@ open class OpenVPNTunnelProvider: NEPacketTunnelProvider {
     
     private var pendingStopHandler: (() -> Void)?
     
+    private var pendingSleepHandler: (() -> Void)?
+
     private var isCountingData = false
     
     private var shouldReconnect = false
@@ -274,7 +276,13 @@ open class OpenVPNTunnelProvider: NEPacketTunnelProvider {
     
     open override func sleep(completionHandler: @escaping () -> Void) {
         log.info("Sleep signal received")
-        completionHandler()
+        if let socket = socket, !socket.isShutdown {
+            log.debug("Shutting down socket")
+            socket.shutdown()
+            pendingSleepHandler = completionHandler
+        } else {
+            completionHandler()
+        }
     }
     
     // MARK: Connection (tunnel queue)
@@ -442,6 +450,15 @@ extension OpenVPNTunnelProvider: GenericSocketDelegate {
 
         // clean up
         finishTunnelDisconnection(error: shutdownError)
+
+        if let pendingSleepHandler = self.pendingSleepHandler {
+            // If we shutdown the tunnel because we're going to sleep,
+            // just call the sleep completion handler. Don't exit the process.
+            log.debug("Calling pending sleep handler")
+            self.pendingSleepHandler = nil
+            pendingSleepHandler()
+            return
+        }
 
         // fallback: UDP is connection-less, treat negotiation timeout as socket timeout
         if didTimeoutNegotiation {
