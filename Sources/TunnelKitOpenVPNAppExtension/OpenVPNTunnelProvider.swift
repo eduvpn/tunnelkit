@@ -272,6 +272,7 @@ open class OpenVPNTunnelProvider: NEPacketTunnelProvider {
 
     open override func wake() {
         log.info("Wake signal received")
+        self.connectTunnel()
     }
     
     open override func sleep(completionHandler: @escaping () -> Void) {
