@@ -1,13 +1,45 @@
-![iOS 13+](https://img.shields.io/badge/ios-13+-green.svg)
-![macOS 10.15+](https://img.shields.io/badge/macos-10.15+-green.svg)
-[![License GPLv3](https://img.shields.io/badge/license-GPLv3-lightgray.svg)](LICENSE)
-
-[![Unit Tests](https://github.com/passepartoutvpn/tunnelkit/actions/workflows/test.yml/badge.svg)](https://github.com/passepartoutvpn/tunnelkit/actions/workflows/test.yml)
-[![Release](https://github.com/passepartoutvpn/tunnelkit/actions/workflows/release.yml/badge.svg)](https://github.com/passepartoutvpn/tunnelkit/actions/workflows/release.yml)
 
 # TunnelKit
 
 This library provides a generic framework for VPN development on Apple platforms.
+
+## Fork
+
+This is a fork of [TunnelKit](https://github.com/passepartoutvpn/tunnelkit) used in [eduVPN/apple](https://github.com/eduvpn/apple) for supporting OpenVPN.
+
+## Development process
+
+Changes from upstream TunnelKit are maintained in the master branch of this fork, and are made on top of a release-tagged version of upstream TunnelKit.
+
+ 0. Clone and setup remotes in the development machine
+
+    ~~~
+    git clone https://github.com/eduvpn/tunnelkit.git eduvpn-tunnelkit
+    cd eduvpn-tunnelkit
+    git remote add upstream https://github.com/passepartoutvpn/tunnelkit.git
+    ~~~
+
+ 1. Fetch commits and rebase our changes on top of upstream
+
+    ~~~
+    git checkout master
+    git fetch upstream
+    git rebase vX.X.X # Replace X.X.X with actual version tag
+    ~~~
+
+ 3. Add commits to the master branch
+
+ 4. Push commits to eduVPN/tunnelkit
+
+    ~~~
+    git push origin master
+    ~~~
+
+ 5. Push any release tags that are missing in our fork
+
+    ~~~
+    git push origin vX.X.X # Replace X.X.X with actual version tag
+    ~~~
 
 ## OpenVPN
 
