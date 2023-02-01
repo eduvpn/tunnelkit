@@ -129,7 +129,7 @@ public class OpenVPNAdapter {
 
     private var pendingStopHandler: (() -> Void)?
 
-    private var pendingSleepHandler: (() -> Void)?
+    private var pendingPauseHandler: (() -> Void)?
 
     private var shouldReconnect = false
 
@@ -221,18 +221,18 @@ public class OpenVPNAdapter {
         }
     }
 
-    public func sleep(completionHandler: @escaping () -> Void) {
+    public func pause(completionHandler: @escaping () -> Void) {
         if let socket = socket, !socket.isShutdown {
             log.debug("Shutting down socket")
             session?.sendExitNotificationIfApplicable(completion: nil)
             socket.shutdown()
-            pendingSleepHandler = completionHandler
+            pendingPauseHandler = completionHandler
         } else {
             completionHandler()
         }
     }
 
-    public func wake() {
+    public func resume() {
         self.connectTunnel()
     }
 }
@@ -412,12 +412,12 @@ extension OpenVPNAdapter: GenericSocketDelegate {
         // clean up
         finishTunnelDisconnection(error: shutdownError)
 
-        if let pendingSleepHandler = self.pendingSleepHandler {
-            // If we shutdown the tunnel because we're going to sleep,
-            // just call the sleep completion handler. Don't exit the process.
-            log.debug("Calling pending sleep handler")
-            self.pendingSleepHandler = nil
-            pendingSleepHandler()
+        if let pendingPauseHandler = self.pendingPauseHandler {
+            // If we shutdown the tunnel because of shutdownTunnelWithoutExitingProcess,
+            // just call the completion handler. Don't exit the process.
+            log.debug("Calling pending shutdown handler")
+            self.pendingPauseHandler = nil
+            pendingPauseHandler()
             return
         }
 

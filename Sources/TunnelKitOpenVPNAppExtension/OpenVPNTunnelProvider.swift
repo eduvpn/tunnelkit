@@ -217,16 +217,6 @@ open class OpenVPNTunnelProvider: NEPacketTunnelProvider {
     
     // MARK: Wake/Sleep (debugging placeholders)
 
-    open override func wake() {
-        log.info("Wake signal received")
-        adapter.wake()
-    }
-    
-    open override func sleep(completionHandler: @escaping () -> Void) {
-        log.info("Sleep signal received")
-        adapter.sleep(completionHandler: completionHandler)
-    }
-    
     private func refreshDataCount() {
         guard dataCountInterval > 0 else {
             return
