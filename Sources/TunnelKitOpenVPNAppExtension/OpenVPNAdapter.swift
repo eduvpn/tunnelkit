@@ -144,8 +144,13 @@ public class OpenVPNAdapter {
 
     private var pathMonitor: AnyObject?
 
-    public init(with packetTunnelProvider: NEPacketTunnelProvider) {
+    // We're forced do this ugly thing because in SwiftyBeaver
+    // BaseDestination.flush() is not open, and not overrideable
+    private var flushLogHandler: () -> Void
+
+    public init(with packetTunnelProvider: NEPacketTunnelProvider, flushLogHandler: @escaping () -> Void) {
         self.packetTunnelProvider = packetTunnelProvider
+        self.flushLogHandler = flushLogHandler
     }
 
     deinit {
@@ -825,11 +830,7 @@ extension OpenVPNAdapter {
 
     private func flushLog() {
         log.debug("Flushing log...")
-
-        // XXX: should enforce SwiftyBeaver flush?
-//        if let url = cfg.urlForDebugLog {
-//            memoryLog.flush(to: url)
-//        }
+        self.flushLogHandler()
     }
 
     private func logCurrentSSID() {
