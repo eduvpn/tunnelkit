@@ -99,6 +99,11 @@ public class OpenVPNAdapter {
         "2606:4700:4700::1001"
     ]
 
+    /// A handler to call if AUTH_FAIL occurs even after retrying without local TLS options.
+    /// If this is set, it's called and the tunnel is not cancelled.
+    /// If this is not set, the tunnel is cancelled.
+    public var authFailShutdownHandler: (() -> Void)?
+
     // MARK: Constants
 
     public let tunnelQueue = DispatchQueue(label: OpenVPNTunnelProvider.description(), qos: .utility)
@@ -462,6 +467,15 @@ extension OpenVPNAdapter: GenericSocketDelegate {
                 self.connectTunnel(upgradedSocket: upgradedSocket)
             }
             return
+        }
+
+        let isAuthFailure = (shutdownError as? OpenVPNError == .authenticationFailure)
+        if isAuthFailure && !shouldReconnect {
+            if let authFailShutdownHandler = self.authFailShutdownHandler {
+                log.debug("Calling authFailShutdownHandler")
+                authFailShutdownHandler()
+                return
+            }
         }
 
         // shut down
