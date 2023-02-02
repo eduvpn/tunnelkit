@@ -314,7 +314,7 @@ extension OpenVPNTunnelProvider: OpenVPNAdapterDelegate {
             case .negotiationTimeout, .pingTimeout, .staleSession:
                 return .timeout
                 
-            case .badCredentials:
+            case .authenticationFailure:
                 return .authentication
                 
             case .serverCompression:

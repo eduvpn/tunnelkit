@@ -54,8 +54,8 @@ public enum OpenVPNError: String, Error {
     /// The control packet has an incorrect prefix payload.
     case wrongControlDataPrefix
     
-    /// The provided credentials failed authentication.
-    case badCredentials
+    /// The provided credentials or certificates failed authentication.
+    case authenticationFailure
     
     /// The PUSH_REPLY is multipart.
     case continuationPushReply

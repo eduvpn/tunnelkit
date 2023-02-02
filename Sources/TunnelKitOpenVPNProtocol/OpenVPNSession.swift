@@ -944,12 +944,12 @@ public class OpenVPNSession: Session {
                 log.warning("Authentication failure, retrying without local options")
                 withLocalOptions = false
                 log.debug("Initiating reconnect")
-                deferStop(.reconnect, OpenVPNError.badCredentials)
+                deferStop(.reconnect, OpenVPNError.authenticationFailure)
                 return
             }
 
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, OpenVPNError.badCredentials)
+            deferStop(.shutdown, OpenVPNError.authenticationFailure)
             return
         }
         
