@@ -157,6 +157,10 @@ public class OpenVPNAdapter {
         pathMonitor?.cancel()
     }
 
+    /// Start the tunnel
+    ///
+    /// Initializes the session and starts the tunnel
+
     public func start(providerConfiguration: OpenVPN.ProviderConfiguration,
                       credentials: OpenVPN.Credentials?,
                       completionHandler: @escaping (Error?) -> Void) {
@@ -195,6 +199,10 @@ public class OpenVPNAdapter {
         }
     }
 
+    /// Stops the tunnel
+    ///
+    /// Sends exit notification, then shuts down the session and clears cached certificates
+
     public func stop(completionHandler: @escaping () -> Void) {
         pendingStartHandler = nil
 
@@ -221,6 +229,10 @@ public class OpenVPNAdapter {
         }
     }
 
+    /// Pauses the tunnel for resuming later
+    ///
+    /// Sends exit notification, and in parallel, shuts down the socket
+
     public func pause(completionHandler: @escaping () -> Void) {
         if let socket = socket, !socket.isShutdown {
             log.debug("Shutting down socket")
@@ -231,6 +243,8 @@ public class OpenVPNAdapter {
             completionHandler()
         }
     }
+
+    /// Resumes a paused tunnel
 
     public func resume() {
         self.connectTunnel()
