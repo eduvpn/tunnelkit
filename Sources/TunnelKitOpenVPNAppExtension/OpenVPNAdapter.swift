@@ -104,6 +104,12 @@ public class OpenVPNAdapter {
     /// If this is not set, the tunnel is cancelled.
     public var authFailShutdownHandler: (() -> Void)?
 
+
+    /// A handler to call when the adapter needs to flush the log to disk.
+    /// We're forced do this ugly thing because in SwiftyBeaver
+    /// BaseDestination.flush() is not open, and not overrideable.
+    public var flushLogHandler: (() -> Void)?
+
     // MARK: Constants
 
     public let tunnelQueue = DispatchQueue(label: OpenVPNTunnelProvider.description(), qos: .utility)
@@ -149,13 +155,8 @@ public class OpenVPNAdapter {
 
     private var pathMonitor: AnyObject?
 
-    // We're forced do this ugly thing because in SwiftyBeaver
-    // BaseDestination.flush() is not open, and not overrideable
-    private var flushLogHandler: () -> Void
-
-    public init(with packetTunnelProvider: NEPacketTunnelProvider, flushLogHandler: @escaping () -> Void) {
+    public init(with packetTunnelProvider: NEPacketTunnelProvider) {
         self.packetTunnelProvider = packetTunnelProvider
-        self.flushLogHandler = flushLogHandler
     }
 
     deinit {
@@ -857,8 +858,12 @@ extension OpenVPNAdapter {
     }
 
     private func flushLog() {
-        log.debug("Flushing log...")
-        self.flushLogHandler()
+        if let flushLogHandler = self.flushLogHandler {
+            log.debug("Flushing log...")
+            flushLogHandler()
+        } else {
+            log.debug("No flush log handler is set")
+        }
     }
 
     private func logCurrentSSID() {

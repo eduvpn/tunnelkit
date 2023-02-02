@@ -58,7 +58,7 @@ private let log = SwiftyBeaver.self
  */
 open class OpenVPNTunnelProvider: NEPacketTunnelProvider {
 
-    private lazy var adapter = OpenVPNAdapter(with: self, flushLogHandler: { })
+    private lazy var adapter = OpenVPNAdapter(with: self)
 
     // MARK: Tweaks
     
