@@ -194,6 +194,21 @@ static NSString *RoutingTableEntryName(struct sockaddr *sa, struct sockaddr *mas
     return [self.network isEqualToString:@"default"];
 }
 
+- (BOOL)isLinkLevel
+{
+    return [self.gateway isEqualToString:@"link"];
+}
+
+- (BOOL)isIPv6LinkLocal
+{
+    return self.isIPv6 && [self.network hasPrefix:@"fe80"];
+}
+
+- (BOOL)isIPv6Multicast
+{
+    return self.isIPv6 && [self.network hasPrefix:@"ff"];
+}
+
 - (BOOL)matchesDestination:(NSString *)destination
 {
     NSParameterAssert(destination);
@@ -388,6 +403,8 @@ static NSString *RoutingTableEntryName(struct sockaddr *sa, struct sockaddr *mas
             }
             break;
         }
+        case AF_LINK:
+            cp = "link";
         default:
             break;
     }

@@ -804,6 +804,8 @@ extension OpenVPNAdapter: OpenVPNSessionDelegate {
                 let gateway = table.defaultGateway4()?.gateway(),
                 let route = table.broadestRoute4(matchingDestination: gateway) {
 
+                log.info("Block local: Broadest route4 matching default gateway \(gateway) is \(route)")
+
                 route.partitioned()?.forEach {
                     let destination = $0.network()
                     guard let netmask = $0.networkMask() else {
@@ -820,6 +822,8 @@ extension OpenVPNAdapter: OpenVPNSessionDelegate {
             if isIPv6Gateway,
                 let gateway = table.defaultGateway6()?.gateway(),
                 let route = table.broadestRoute6(matchingDestination: gateway) {
+
+                log.info("Block local: Broadest route6 matching default gateway \(gateway) is \(route)")
 
                 route.partitioned()?.forEach {
                     let destination = $0.network()

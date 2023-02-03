@@ -40,6 +40,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)networkInterface;
 
 - (BOOL)isDefault;
+- (BOOL)isLinkLevel;
+- (BOOL)isIPv6LinkLocal;
+- (BOOL)isIPv6Multicast;
 - (BOOL)matchesDestination:(NSString *)destination;
 - (nullable NSArray<RoutingTableEntry *> *)partitioned;
 

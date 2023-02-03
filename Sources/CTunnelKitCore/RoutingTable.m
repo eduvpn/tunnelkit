@@ -147,7 +147,7 @@
     RoutingTableEntry *minRoute;
     NSInteger minPrefix = 128 + 1;
     for (RoutingTableEntry *route in self.ipv6) {
-        if ([route isDefault]) { // leave last
+        if ([route isDefault] && ![route.networkInterface hasPrefix:@"utun"]) { // leave last
             defaultRoute = route;
             continue;
         }
@@ -156,6 +156,21 @@
             minPrefix = route.prefix;
         }
     }
+
+    // If we get a IPv6 link-local address, then that's not what we want.
+    // Find the broadest link-level route to the same interface.
+    if (minRoute != nil && [minRoute isIPv6LinkLocal] && defaultRoute != nil) {
+        minPrefix = 128 + 1;
+        for (RoutingTableEntry *route in self.ipv6) {
+            if ((!route.isIPv6LinkLocal) && (!route.isIPv6Multicast) && route.isLinkLevel && [route.networkInterface isEqualToString:defaultRoute.networkInterface]) {
+                if (route.prefix < minPrefix) {
+                    minRoute = route;
+                    minPrefix = route.prefix;
+                }
+            }
+        }
+    }
+
     return minRoute ?: defaultRoute;
 }
 
