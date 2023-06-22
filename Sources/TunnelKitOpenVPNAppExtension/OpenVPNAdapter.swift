@@ -160,7 +160,7 @@ public class OpenVPNAdapter {
     }
 
     deinit {
-        pathMonitor?.cancel()
+        (pathMonitor as? NWPathMonitor)?.cancel()
     }
 
     /// Start the tunnel
