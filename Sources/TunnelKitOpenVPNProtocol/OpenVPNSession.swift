@@ -68,7 +68,7 @@ public protocol OpenVPNSessionDelegate: AnyObject {
 public class OpenVPNSession: Session {
     private enum StopMethod {
         case shutdown
-        
+        case retry // Similar to what on-demand would do
         case reconnect
     }
     
@@ -242,7 +242,7 @@ public class OpenVPNSession: Session {
             let error = notification.userInfo?[OpenVPNErrorKey] as? Error
             self.queue.async {
                 log.debug("Initiating shutdown")
-                self.deferStop(.shutdown, error)
+                self.deferStop(.retry, error)
             }
         }
         
@@ -293,16 +293,25 @@ public class OpenVPNSession: Session {
     
     public func shutdown(error: Error?) {
         guard !isStopping else {
-            log.warning("Ignore stop request, already stopping!")
+            log.warning("Ignore stop request for shutdown, already stopping!")
             return
         }
         log.debug("Initiating shutdown")
         deferStop(.shutdown, error)
     }
     
+    public func retry(error: Error?) {
+        guard !isStopping else {
+            log.warning("Ignore stop request for retry, already stopping!")
+            return
+        }
+        log.debug("Initiating retry")
+        deferStop(.retry, error)
+    }
+    
     public func reconnect(error: Error?) {
         guard !isStopping else {
-            log.warning("Ignore stop request, already stopping!")
+            log.warning("Ignore stop request for reconnect, already stopping!")
             return
         }
         log.debug("Initiating reconnect")
@@ -500,7 +509,7 @@ public class OpenVPNSession: Session {
                 // HARD_RESET coming during a SOFT_RESET handshake (before connecting)
                 guard !isRenegotiating else {
                     log.debug("Initiating shutdown")
-                    deferStop(.shutdown, OpenVPNError.staleSession)
+                    deferStop(.retry, OpenVPNError.staleSession)
                     return
                 }
                 
@@ -558,7 +567,7 @@ public class OpenVPNSession: Session {
         let now = Date()
         guard now.timeIntervalSince(lastPing.inbound) <= keepAliveTimeout else {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, OpenVPNError.pingTimeout)
+            deferStop(.retry, OpenVPNError.pingTimeout)
             return
         }
 
@@ -597,7 +606,7 @@ public class OpenVPNSession: Session {
             try controlChannel.reset(forNewSession: forNewSession)
         } catch let e {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, e)
+            deferStop(.retry, e)
         }
     }
     
@@ -683,7 +692,7 @@ public class OpenVPNSession: Session {
             try authenticator?.putAuth(into: negotiationKey.tls, options: configuration)
         } catch let e {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, e)
+            deferStop(.retry, e)
             return
         }
 
@@ -693,7 +702,7 @@ public class OpenVPNSession: Session {
         } catch let e {
             if let _ = e.openVPNErrorCode() {
                 log.error("TLS.auth: Failed pulling ciphertext (error: \(e))")
-                shutdown(error: e)
+                retry(error: e)
                 return
             }
             log.verbose("TLS.auth: Still can't pull ciphertext")
@@ -722,7 +731,7 @@ public class OpenVPNSession: Session {
         } catch let e {
             if let _ = e.openVPNErrorCode() {
                 log.error("TLS.auth: Failed pulling ciphertext (error: \(e))")
-                shutdown(error: e)
+                retry(error: e)
                 return
             }
             log.verbose("TLS.ifconfig: Still can't pull ciphertext")
@@ -787,13 +796,13 @@ public class OpenVPNSession: Session {
             guard let remoteSessionId = controlChannel.remoteSessionId else {
                 log.error("No remote sessionId (never set)")
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, OpenVPNError.missingSessionId)
+                deferStop(.retry, OpenVPNError.missingSessionId)
                 return
             }
             guard packet.sessionId == remoteSessionId else {
                 log.error("Packet session mismatch (\(packet.sessionId.toHex()) != \(remoteSessionId.toHex()))")
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, OpenVPNError.sessionMismatch)
+                deferStop(.retry, OpenVPNError.sessionMismatch)
                 return
             }
 
@@ -817,7 +826,7 @@ public class OpenVPNSession: Session {
                 try negotiationKey.tls.start()
             } catch let e {
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, e)
+                deferStop(.retry, e)
                 return
             }
 
@@ -827,11 +836,11 @@ public class OpenVPNSession: Session {
             } catch let e {
                 if let _ = e.openVPNErrorCode() {
                     log.error("TLS.connect: Failed pulling ciphertext (error: \(e))")
-                    shutdown(error: e)
+                    retry(error: e)
                     return
                 }
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, e)
+                deferStop(.retry, e)
                 return
             }
 
@@ -843,13 +852,13 @@ public class OpenVPNSession: Session {
             guard let remoteSessionId = controlChannel.remoteSessionId else {
                 log.error("No remote sessionId found in packet (control packets before server HARD_RESET)")
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, OpenVPNError.missingSessionId)
+                deferStop(.retry, OpenVPNError.missingSessionId)
                 return
             }
             guard packet.sessionId == remoteSessionId else {
                 log.error("Packet session mismatch (\(packet.sessionId.toHex()) != \(remoteSessionId.toHex()))")
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, OpenVPNError.sessionMismatch)
+                deferStop(.retry, OpenVPNError.sessionMismatch)
                 return
             }
             
@@ -910,7 +919,7 @@ public class OpenVPNSession: Session {
                 }
             } catch let e {
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, e)
+                deferStop(.retry, e)
                 return
             }
             
@@ -949,7 +958,7 @@ public class OpenVPNSession: Session {
             }
 
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, OpenVPNError.authenticationFailure)
+            deferStop(.retry, OpenVPNError.authenticationFailure)
             return
         }
         
@@ -957,7 +966,7 @@ public class OpenVPNSession: Session {
         guard !message.hasPrefix("RESTART") else {
             log.debug("Disconnecting due to server shutdown")
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, OpenVPNError.serverShutdown)
+            deferStop(.retry, OpenVPNError.serverShutdown)
             return
         }
         
@@ -1002,14 +1011,14 @@ public class OpenVPNSession: Session {
             return
         } catch let e {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, e)
+            deferStop(.retry, e)
             return
         }
         
         pushReply = reply
         guard reply.options.ipv4 != nil || reply.options.ipv6 != nil else {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, OpenVPNError.noRouting)
+            deferStop(.retry, OpenVPNError.noRouting)
             return
         }
         
@@ -1059,7 +1068,7 @@ public class OpenVPNSession: Session {
         } catch let e {
             log.warning("Failed control packet serialization: \(e)")
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, e)
+            deferStop(.retry, e)
             return
         }
         for raw in rawList {
@@ -1077,7 +1086,7 @@ public class OpenVPNSession: Session {
                 if let error = error {
                     log.error("Failed LINK write during control flush: \(error)")
                     log.debug("Initiating shutdown")
-                    self?.deferStop(.shutdown, OpenVPNError.failedLinkWrite)
+                    self?.deferStop(.retry, OpenVPNError.failedLinkWrite)
                     return
                 }
             }
@@ -1145,7 +1154,7 @@ public class OpenVPNSession: Session {
             )
         } catch let e {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, e)
+            deferStop(.retry, e)
             return
         }
 
@@ -1178,7 +1187,7 @@ public class OpenVPNSession: Session {
         } catch let e {
             guard !e.isOpenVPNError() else {
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, e)
+                deferStop(.retry, e)
                 return
             }
             log.debug("Initiating reconnect")
@@ -1222,7 +1231,7 @@ public class OpenVPNSession: Session {
                     } else {
                         log.error("Data: Failed LINK write during send data: \(error)")
                         log.debug("Initiating shutdown")
-                        self.deferStop(.shutdown, OpenVPNError.failedLinkWrite)
+                        self.deferStop(.retry, OpenVPNError.failedLinkWrite)
                     }
                 } else {
                     // Trigger getting of more to-be-sent-out packets from the TUN interface
@@ -1233,7 +1242,7 @@ public class OpenVPNSession: Session {
         } catch let e {
             guard !e.isOpenVPNError() else {
                 log.debug("Initiating shutdown")
-                deferStop(.shutdown, e)
+                deferStop(.retry, e)
                 return
             }
             log.debug("Initiating reconnect")
@@ -1259,7 +1268,7 @@ public class OpenVPNSession: Session {
             )
         } catch let e {
             log.debug("Initiating shutdown")
-            deferStop(.shutdown, e)
+            deferStop(.retry, e)
             return
         }
         
@@ -1274,7 +1283,7 @@ public class OpenVPNSession: Session {
                 if let error = error {
                     log.error("Failed LINK write during send ack for packetId \(controlPacket.packetId): \(error)")
                     log.debug("Initiating shutdown")
-                    self?.deferStop(.shutdown, OpenVPNError.failedLinkWrite)
+                    self?.deferStop(.retry, OpenVPNError.failedLinkWrite)
                     return
                 }
                 log.debug("Ack successfully written to LINK for packetId \(controlPacket.packetId)")
@@ -1341,7 +1350,8 @@ public class OpenVPNSession: Session {
             case .shutdown:
                 self?.doShutdown(error: error)
                 self?.cleanupCache()
-                
+            case .retry:
+                self?.doRetry(error: error)
             case .reconnect:
                 self?.doReconnect(error: error)
             }
@@ -1364,6 +1374,12 @@ public class OpenVPNSession: Session {
         } else {
             log.info("Trigger reconnection on request")
         }
+        stopError = error
+        delegate?.sessionDidStop(self, withError: error, shouldReconnect: true)
+    }
+
+    private func doRetry(error: Error?) {
+        log.info("Trigger retry (error: \(String(describing: error))")
         stopError = error
         delegate?.sessionDidStop(self, withError: error, shouldReconnect: true)
     }
