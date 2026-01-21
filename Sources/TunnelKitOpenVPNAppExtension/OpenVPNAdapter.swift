@@ -150,7 +150,9 @@ public class OpenVPNAdapter {
             self.packetTunnelProvider?.reasserting = reasserting
         }
     }
-
+    
+    public var isPaused = false
+    
     // MARK: NWPathMonitor usage
 
     private var pathMonitor: AnyObject?
@@ -243,6 +245,8 @@ public class OpenVPNAdapter {
         if let socket = socket, !socket.isShutdown {
             log.debug("Shutting down socket")
             session?.sendExitNotificationIfApplicable(completion: nil)
+            self.isPaused = true
+            self.session?.isPaused = true
             socket.shutdown()
             pendingPauseHandler = completionHandler
         } else {
@@ -253,6 +257,8 @@ public class OpenVPNAdapter {
     /// Resumes a paused tunnel
 
     public func resume() {
+        self.isPaused = false
+        self.session?.isPaused = false
         self.connectTunnel()
     }
 }
@@ -452,7 +458,7 @@ extension OpenVPNAdapter: GenericSocketDelegate {
         }
 
         // reconnect?
-        if shouldReconnect {
+        if shouldReconnect && !isPaused {
             log.debug("Disconnection is recoverable, tunnel will reconnect in \(reconnectionDelay) milliseconds...")
             tunnelQueue.schedule(after: .milliseconds(reconnectionDelay)) {
 

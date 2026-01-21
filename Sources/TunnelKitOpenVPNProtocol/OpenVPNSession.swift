@@ -127,6 +127,8 @@ public class OpenVPNSession: Session {
     
     private var isRenegotiating: Bool
     
+    public var isPaused = false
+    
     private var negotiationKey: OpenVPN.SessionKey {
         guard let key = keys[negotiationKeyIdx] else {
             fatalError("Keys are empty or index \(negotiationKeyIdx) not found in \(keys.keys)")
@@ -561,6 +563,11 @@ public class OpenVPNSession: Session {
     // Ruby: ping
     private func ping() {
         guard currentKey?.controlState == .connected else {
+            return
+        }
+        
+        if self.isPaused {
+            // Don't send pings when the session is paused
             return
         }
         
