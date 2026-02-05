@@ -320,7 +320,7 @@ private extension OpenVPNAdapter {
     }
 
     private func finishTunnelDisconnection(error: Error?) {
-        if let session = session, !(shouldReconnect && session.canRebindLink()) {
+        if let session = session, !session.canRebindLink() {
             session.cleanup()
         }
 
