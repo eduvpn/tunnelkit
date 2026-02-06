@@ -1359,6 +1359,7 @@ public class OpenVPNSession: Session {
                 self?.cleanupCache()
             case .retry:
                 self?.doRetry(error: error)
+                self?.cleanupCache()
             case .reconnect:
                 self?.doReconnect(error: error)
             }
