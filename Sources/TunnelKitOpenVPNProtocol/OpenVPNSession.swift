@@ -165,6 +165,8 @@ public class OpenVPNSession: Session {
 
     private var isWaitingForSendBufferSpace: Bool
 
+    private var hasWrittenInfoLogAboutPings: Bool = false
+
     /// The optional reason why the session stopped.
     public private(set) var stopError: Error?
     
@@ -399,6 +401,7 @@ public class OpenVPNSession: Session {
     // Ruby: udp_loop
     private func loopLink() {
         let loopedLink = link
+        self.hasWrittenInfoLogAboutPings = false
         loopedLink?.setReadHandler(queue: queue) { [weak self] (newPackets, error) in
             guard self?.link === loopedLink else {
                 log.warning("Ignoring read from outdated LINK")
@@ -574,10 +577,19 @@ public class OpenVPNSession: Session {
         }
 
         // is keep-alive enabled?
-        if let _ = keepAliveInterval, !self.isPaused {
+        if let keepAliveInterval = keepAliveInterval, !self.isPaused {
+            if !self.hasWrittenInfoLogAboutPings {
+                log.info("Sending ping every \(keepAliveInterval) seconds")
+                self.hasWrittenInfoLogAboutPings = true
+            }
             log.debug("Send ping")
             sendDataPackets([OpenVPN.DataPacket.pingString], onSuccess: {})
             lastPing.outbound = Date()
+        } else {
+            if !self.hasWrittenInfoLogAboutPings {
+                log.info("Not sending pings")
+                self.hasWrittenInfoLogAboutPings = true
+            }
         }
 
         // schedule even just to check for ping timeout
