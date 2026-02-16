@@ -566,11 +566,6 @@ public class OpenVPNSession: Session {
             return
         }
         
-        if self.isPaused {
-            // Don't send pings when the session is paused
-            return
-        }
-        
         let now = Date()
         guard now.timeIntervalSince(lastPing.inbound) <= keepAliveTimeout else {
             log.debug("Initiating shutdown")
@@ -579,14 +574,16 @@ public class OpenVPNSession: Session {
         }
 
         // is keep-alive enabled?
-        if let _ = keepAliveInterval {
+        if let _ = keepAliveInterval, !self.isPaused {
             log.debug("Send ping")
             sendDataPackets([OpenVPN.DataPacket.pingString], onSuccess: {})
             lastPing.outbound = Date()
         }
 
         // schedule even just to check for ping timeout
-        scheduleNextPing()
+        if !self.isPaused {
+            scheduleNextPing()
+        }
     }
     
     private func scheduleNextPing() {
