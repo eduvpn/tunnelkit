@@ -237,13 +237,13 @@ public class OpenVPNSession: Session {
             return
         }
 
-        log.debug("Starting VPN session")
+        log.info("Starting VPN session")
         
         // WARNING: runs in notification source queue (we know it's "queue", but better be safe than sorry)
         tlsObserver = NotificationCenter.default.addObserver(forName: .TLSBoxPeerVerificationError, object: nil, queue: nil) { (notification) in
             let error = notification.userInfo?[OpenVPNErrorKey] as? Error
             self.queue.async {
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 self.deferStop(.retry, error)
             }
         }
@@ -298,7 +298,7 @@ public class OpenVPNSession: Session {
             log.warning("Ignore stop request for shutdown, already stopping!")
             return
         }
-        log.debug("Initiating shutdown")
+        log.info("Initiating shutdown")
         deferStop(.shutdown, error)
     }
     
@@ -510,7 +510,7 @@ public class OpenVPNSession: Session {
 
                 // HARD_RESET coming during a SOFT_RESET handshake (before connecting)
                 guard !isRenegotiating else {
-                    log.debug("Initiating shutdown")
+                    log.info("Initiating shutdown")
                     deferStop(.retry, OpenVPNError.staleSession)
                     return
                 }
@@ -568,7 +568,7 @@ public class OpenVPNSession: Session {
         
         let now = Date()
         guard now.timeIntervalSince(lastPing.inbound) <= keepAliveTimeout else {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, OpenVPNError.pingTimeout)
             return
         }
@@ -609,7 +609,7 @@ public class OpenVPNSession: Session {
         do {
             try controlChannel.reset(forNewSession: forNewSession)
         } catch let e {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, e)
         }
     }
@@ -695,7 +695,7 @@ public class OpenVPNSession: Session {
             authenticator?.withLocalOptions = withLocalOptions
             try authenticator?.putAuth(into: negotiationKey.tls, options: configuration)
         } catch let e {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, e)
             return
         }
@@ -799,13 +799,13 @@ public class OpenVPNSession: Session {
             }
             guard let remoteSessionId = controlChannel.remoteSessionId else {
                 log.error("No remote sessionId (never set)")
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, OpenVPNError.missingSessionId)
                 return
             }
             guard packet.sessionId == remoteSessionId else {
                 log.error("Packet session mismatch (\(packet.sessionId.toHex()) != \(remoteSessionId.toHex()))")
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, OpenVPNError.sessionMismatch)
                 return
             }
@@ -829,7 +829,7 @@ public class OpenVPNSession: Session {
             do {
                 try negotiationKey.tls.start()
             } catch let e {
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, e)
                 return
             }
@@ -843,7 +843,7 @@ public class OpenVPNSession: Session {
                     retry(error: e)
                     return
                 }
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, e)
                 return
             }
@@ -855,13 +855,13 @@ public class OpenVPNSession: Session {
         else if ((packet.code == .controlV1) && (negotiationKey.state == .tls)) {
             guard let remoteSessionId = controlChannel.remoteSessionId else {
                 log.error("No remote sessionId found in packet (control packets before server HARD_RESET)")
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, OpenVPNError.missingSessionId)
                 return
             }
             guard packet.sessionId == remoteSessionId else {
                 log.error("Packet session mismatch (\(packet.sessionId.toHex()) != \(remoteSessionId.toHex()))")
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, OpenVPNError.sessionMismatch)
                 return
             }
@@ -922,7 +922,7 @@ public class OpenVPNSession: Session {
                     return
                 }
             } catch let e {
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, e)
                 return
             }
@@ -961,7 +961,7 @@ public class OpenVPNSession: Session {
                 return
             }
 
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, OpenVPNError.authenticationFailure)
             return
         }
@@ -969,7 +969,7 @@ public class OpenVPNSession: Session {
         // disconnect on remote server restart (--explicit-exit-notify)
         guard !message.hasPrefix("RESTART") else {
             log.debug("Disconnecting due to server shutdown")
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, OpenVPNError.serverShutdown)
             return
         }
@@ -1014,14 +1014,14 @@ public class OpenVPNSession: Session {
             // FIXME: strip "PUSH_REPLY" and "push-continuation 2"
             return
         } catch let e {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, e)
             return
         }
         
         pushReply = reply
         guard reply.options.ipv4 != nil || reply.options.ipv6 != nil else {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, OpenVPNError.noRouting)
             return
         }
@@ -1071,7 +1071,7 @@ public class OpenVPNSession: Session {
             rawList = try controlChannel.writeOutboundPackets()
         } catch let e {
             log.warning("Failed control packet serialization: \(e)")
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, e)
             return
         }
@@ -1089,7 +1089,7 @@ public class OpenVPNSession: Session {
                 }
                 if let error = error {
                     log.error("Failed LINK write during control flush: \(error)")
-                    log.debug("Initiating shutdown")
+                    log.info("Initiating shutdown")
                     self?.deferStop(.retry, OpenVPNError.failedLinkWrite)
                     return
                 }
@@ -1157,7 +1157,7 @@ public class OpenVPNSession: Session {
                 remoteSessionId
             )
         } catch let e {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, e)
             return
         }
@@ -1190,7 +1190,7 @@ public class OpenVPNSession: Session {
             tunnel?.writePackets(decryptedPackets, completionHandler: nil)
         } catch let e {
             guard !e.isOpenVPNError() else {
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, e)
                 return
             }
@@ -1234,7 +1234,7 @@ public class OpenVPNSession: Session {
                         }
                     } else {
                         log.error("Data: Failed LINK write during send data: \(error)")
-                        log.debug("Initiating shutdown")
+                        log.info("Initiating shutdown")
                         self.deferStop(.retry, OpenVPNError.failedLinkWrite)
                     }
                 } else {
@@ -1245,7 +1245,7 @@ public class OpenVPNSession: Session {
             }
         } catch let e {
             guard !e.isOpenVPNError() else {
-                log.debug("Initiating shutdown")
+                log.info("Initiating shutdown")
                 deferStop(.retry, e)
                 return
             }
@@ -1271,7 +1271,7 @@ public class OpenVPNSession: Session {
                 ackRemoteSessionId: controlPacket.sessionId
             )
         } catch let e {
-            log.debug("Initiating shutdown")
+            log.info("Initiating shutdown")
             deferStop(.retry, e)
             return
         }
@@ -1286,7 +1286,7 @@ public class OpenVPNSession: Session {
                 }
                 if let error = error {
                     log.error("Failed LINK write during send ack for packetId \(controlPacket.packetId): \(error)")
-                    log.debug("Initiating shutdown")
+                    log.info("Initiating shutdown")
                     self?.deferStop(.retry, OpenVPNError.failedLinkWrite)
                     return
                 }
@@ -1327,9 +1327,9 @@ public class OpenVPNSession: Session {
                 completion?(false)
                 return
             }
-            log.debug("Attempting to write packets for exit notification")
+            log.info("Attempting to write packets for exit notification")
             link.writePackets(packets) { [weak self] (error) in
-                log.debug("Done writing packets for exit notification (Error: \(error?.localizedDescription ?? "None"))")
+                log.info("Done writing packets for exit notification (Error: \(error?.localizedDescription ?? "None"))")
                 if let completion = completion {
                     self?.queue.sync {
                         completion(true)
@@ -1337,13 +1337,13 @@ public class OpenVPNSession: Session {
                 }
             }
         } catch {
-            log.debug("Unable to write packets for exit notification (Error: \(error))")
+            log.info("Unable to write packets for exit notification (Error: \(error))")
             completion?(false)
         }
     }
 
     private func deferStop(_ method: StopMethod, _ error: Error?) {
-        log.debug("Stop method: \(method); Error: \(error?.localizedDescription ?? "None")")
+        log.info("Stop method: \(method); Error: \(error?.localizedDescription ?? "None")")
         guard !isStopping else {
             return
         }
