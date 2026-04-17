@@ -39,7 +39,7 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url: "https://github.com/SwiftyBeaver/SwiftyBeaver", from: "1.9.0"),
-        .package(url: "https://codeberg.org/roopc/openssl-apple", .exact("3.5.404")),
+        .package(url: "https://codeberg.org/eduVPN/openssl-apple", .exact("3.5.601")),
         .package(name: "WireGuardKit", url: "https://git.zx2c4.com/wireguard-apple", .exact("1.0.15-26"))
 //        .package(name: "WireGuardKit", url: "https://github.com/passepartoutvpn/wireguard-apple", from: "1.0.16")
     ],
